@@ -1,31 +1,44 @@
 const path = require('path')
 const { program } = require('commander')
 const { chromium } = require('playwright')
+const { Cron } = require('croner')
 
 program
   .requiredOption('-u, --user <string>', '统一认证学号')
   .requiredOption('-p, --password <string>', '统一认证密码')
-  .option('--delay <number>', '最大随机延迟，单位秒')
-  .option('--bark <string>', 'bark推送链接')
+  .option('--daily', '每日8点与13点时随机延迟并打卡')
+  .option('--delay <number>', '随机延迟最大值，单位秒')
   .option('--proxy <string>', '代理，形如：socks5://127.0.0.1:1080')
+  .option('--bark <string>', 'bark推送链接')
 
 const options = program.parse().opts()
 console.log(options)
 
+
 main()
 
-async function main () {
-  if (options.delay) {
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-    const seconds = Math.floor(Math.random() * Number.parseInt(options.delay))
-    console.log('延迟', seconds)
-    await sleep(seconds * 1000)
+async function main() {
+  if (!options.daily) {
+    await dk(options.user, options.password)
+    return
   }
 
-  await run(options.user, options.password)
+  const job = Cron('0 8,13 * * *', { timezone: "Asia/Shanghai" }, async () => {
+    if (options.delay) {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const seconds = Math.floor(Math.random() * Number.parseInt(options.delay))
+      console.log('延迟', seconds)
+      await sleep(seconds * 1000)
+    }
+
+    await dk(options.user, options.password)
+    console.log('下次预计', job.next().toLocaleTimeString("zh-CN"))
+  })
+  console.log('每日打卡已启动，下次预计', job.next().toLocaleTimeString("zh-CN"))
 }
 
-async function run (user, password) {
+
+async function dk(user, password) {
   console.log(user, password)
 
   const browser = await chromium.launch({
@@ -34,7 +47,7 @@ async function run (user, password) {
   const context = await browser.newContext({ locale: 'zh-CN' })
 
   // 推送通知
-  async function bark (title, content) {
+  async function bark(title, content) {
     console.log(title, content)
 
     if (!options.bark) return

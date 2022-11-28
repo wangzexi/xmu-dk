@@ -12,9 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "commander": "^9.4.0",
-    "playwright": "^1.17.2"
-  },
-  "devDependencies": {
-    "standard": "^16.0.3"
+    "playwright": "^1.25.2",
+    "croner": "^5.3.5"
   }
 }
